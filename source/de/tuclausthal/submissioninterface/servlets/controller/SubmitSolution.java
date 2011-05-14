@@ -386,12 +386,18 @@ public class SubmitSolution extends HttpServlet {
 										int lastDot = archivedFileName.lastIndexOf(".");
 										archivedFileName.replace(lastDot, archivedFileName.length(), archivedFileName.subSequence(lastDot, archivedFileName.length()).toString().toLowerCase());
 									}
-									// TODO: relocate java-files from jar/zip archives?
 									File fileToCreate = new File(path, archivedFileName.toString());
-									if (!fileToCreate.getParentFile().exists()) {
-										fileToCreate.getParentFile().mkdirs();
+									// extract defined package in java-files
+									if (archivedFileName.toString().toLowerCase().endsWith(".java")) {
+										File uploadedFile = File.createTempFile("upload", null, path);
+										copyInputStream(zipFile, new BufferedOutputStream(new FileOutputStream(uploadedFile)));
+										relocateJavaFile(path, fileToCreate.getName(), uploadedFile);
+									} else {
+										if (!fileToCreate.getParentFile().exists()) {
+											fileToCreate.getParentFile().mkdirs();
+										}
+										copyInputStream(zipFile, new BufferedOutputStream(new FileOutputStream(fileToCreate)));
 									}
-									copyInputStream(zipFile, new BufferedOutputStream(new FileOutputStream(fileToCreate)));
 								}
 							}
 							zipFile.close();
@@ -422,21 +428,7 @@ public class SubmitSolution extends HttpServlet {
 						}
 						// extract defined package in java-files
 						if (fileName.toLowerCase().endsWith(".java")) {
-							NormalizerIf stripComments = new StripCommentsNormalizer();
-							StringBuffer javaFileContents = stripComments.normalize(Util.loadFile(uploadedFile));
-							Pattern packagePattern = Pattern.compile(".*package\\s+([a-zA-Z$]([a-zA-Z0-9_$]|\\.[a-zA-Z0-9_$])*)\\s*;.*", Pattern.DOTALL);
-							Matcher packageMatcher = packagePattern.matcher(javaFileContents);
-							File destFile = new File(path, fileName);
-							if (packageMatcher.matches()) {
-								String packageName = packageMatcher.group(1).replace(".", System.getProperty("file.separator"));
-								File packageDirectory = new File(path, packageName);
-								packageDirectory.mkdirs();
-								destFile = new File(packageDirectory, fileName);
-							}
-							if (destFile.exists() && destFile.isFile()) {
-								destFile.delete();
-							}
-							uploadedFile.renameTo(destFile);
+							relocateJavaFile(path, fileName, uploadedFile);
 						}
 					}
 					if (!submissionDAO.deleteIfNoFiles(submission, path)) {
@@ -478,6 +470,24 @@ public class SubmitSolution extends HttpServlet {
 			tx.commit();
 			out.println("Problem: Keine Abgabedaten gefunden.");
 		}
+	}
+
+	public void relocateJavaFile(File path, String fileName, File uploadedFile) throws IOException {
+		NormalizerIf stripComments = new StripCommentsNormalizer();
+		StringBuffer javaFileContents = stripComments.normalize(Util.loadFile(uploadedFile));
+		Pattern packagePattern = Pattern.compile(".*package\\s+([a-zA-Z$]([a-zA-Z0-9_$]|\\.[a-zA-Z0-9_$])*)\\s*;.*", Pattern.DOTALL);
+		Matcher packageMatcher = packagePattern.matcher(javaFileContents);
+		File destFile = new File(path, fileName);
+		if (packageMatcher.matches()) {
+			String packageName = packageMatcher.group(1).replace(".", System.getProperty("file.separator"));
+			File packageDirectory = new File(path, packageName);
+			packageDirectory.mkdirs();
+			destFile = new File(packageDirectory, fileName);
+		}
+		if (destFile.exists() && destFile.isFile()) {
+			destFile.delete();
+		}
+		uploadedFile.renameTo(destFile);
 	}
 
 	public static final void copyInputStream(ZipInputStream in, OutputStream out) throws IOException {
