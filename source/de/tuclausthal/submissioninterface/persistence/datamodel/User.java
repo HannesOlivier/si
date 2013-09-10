@@ -44,7 +44,7 @@ public class User implements Serializable {
 	private String email;
 	private String lastName = "";
 	private String firstName = "";
-	private boolean superUser = false;
+	private int superUser = 0;
 	private Set<Participation> lectureParticipant;
 
 	/**
@@ -81,8 +81,27 @@ public class User implements Serializable {
 	/**
 	 * @return the superUser
 	 */
-	public boolean isSuperUser() {
+	public int getSuperUser() {
 		return superUser;
+	}
+
+	@Transient
+	public SuperUserType getSuperUserType() {
+		return SuperUserType.values()[getSuperUser()];
+	}
+
+	@Transient
+	public void setSuperUserType(SuperUserType type) {
+		setSuperUser(type.ordinal());
+	}
+
+	public static enum SuperUserType {
+		/** no superuser */
+		NO,
+		/** user can enter admin menu and change his/her lecture participation type for lectures subscribed to */
+		SUPERUSER,
+		/** unrestricted access to admin menu */
+		SYSTEMSUPERUSER
 	}
 
 	/**
@@ -102,7 +121,7 @@ public class User implements Serializable {
 	/**
 	 * @param superUser the superUser to set
 	 */
-	public void setSuperUser(boolean superUser) {
+	public void setSuperUser(int superUser) {
 		this.superUser = superUser;
 	}
 

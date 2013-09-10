@@ -29,6 +29,7 @@ import org.hibernate.criterion.Restrictions;
 import de.tuclausthal.submissioninterface.persistence.dao.UserDAOIf;
 import de.tuclausthal.submissioninterface.persistence.datamodel.Student;
 import de.tuclausthal.submissioninterface.persistence.datamodel.User;
+import de.tuclausthal.submissioninterface.persistence.datamodel.User.SuperUserType;
 
 /**
  * Data Access Object implementation for the UserDAOIf
@@ -97,8 +98,8 @@ public class UserDAO extends AbstractDAO implements UserDAOIf {
 	}
 
 	@Override
-	public List<User> getSuperUsers() {
-		return getSession().createCriteria(User.class).add(Restrictions.eq("superUser", true)).addOrder(Order.asc("lastName")).addOrder(Order.asc("firstName")).list();
+	public List<User> getSuperUsers(SuperUserType type) {
+		return getSession().createCriteria(User.class).add(Restrictions.eq("superUser", type.ordinal())).addOrder(Order.asc("lastName")).addOrder(Order.asc("firstName")).list();
 	}
 
 	@Override

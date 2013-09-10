@@ -1,5 +1,5 @@
 /*
- * Copyright 2009 - 2010,2012 Sven Strickroth <email@cs-ware.de>
+ * Copyright 2009 - 2010,2012-2013 Sven Strickroth <email@cs-ware.de>
  * 
  * This file is part of the SubmissionInterface.
  * 
@@ -28,8 +28,11 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.hibernate.Session;
+
 import de.tuclausthal.submissioninterface.persistence.dao.DAOFactory;
 import de.tuclausthal.submissioninterface.persistence.datamodel.User;
+import de.tuclausthal.submissioninterface.persistence.datamodel.User.SuperUserType;
 import de.tuclausthal.submissioninterface.servlets.RequestAdapter;
 import de.tuclausthal.submissioninterface.template.Template;
 import de.tuclausthal.submissioninterface.template.TemplateFactory;
@@ -46,7 +49,19 @@ public class AdminMenueShowAdminUsersView extends HttpServlet {
 		template.printTemplateHeader("Super User", "<a href=\"" + response.encodeURL("Overview") + "\">Meine Veranstaltungen</a> - <a href=\"" + response.encodeURL("AdminMenue") + "\">Admin-Menü</a> &gt; Super User");
 		PrintWriter out = response.getWriter();
 
-		Iterator<User> userIterator = ((List<User>) request.getAttribute("superusers")).iterator();
+		printUserTable(response, out, RequestAdapter.getSession(request), ((List<User>) request.getAttribute("systemsuperusers")).iterator(), "SystemSuperUser");
+
+		out.println("<p>SystemSuperUsers have full rights to do anything.</p>");
+
+		printUserTable(response, out, RequestAdapter.getSession(request), ((List<User>) request.getAttribute("superusers")).iterator(), "SuperUser");
+		out.println("<p>SuperUsers have the right to enter the Admin Menu and modify the lectures they are subscribed to (e.g. for testing as a student/tutor and so on).</p>");
+
+		out.println("<div class=mid><a href=\"" + response.encodeURL("?") + "\">zur Übersicht</a></div>");
+		template.printTemplateFooter();
+	}
+
+	private void printUserTable(HttpServletResponse response, PrintWriter out, Session session, Iterator<User> userIterator, String type) {
+		out.println("<h2>" + type + "</h2>");
 		out.println("<table class=border>");
 		out.println("<tr>");
 		out.println("<th>Benutzer</th>");
@@ -61,13 +76,13 @@ public class AdminMenueShowAdminUsersView extends HttpServlet {
 		}
 		out.println("<tr>");
 		out.println("<td colspan=2>");
-		userIterator = DAOFactory.UserDAOIf(RequestAdapter.getSession(request)).getUsers().iterator();
+		userIterator = DAOFactory.UserDAOIf(session).getUsers().iterator();
 		out.println("<form action=\"?\">");
-		out.println("<input type=hidden name=action value=addSuperUser>");
+		out.println("<input type=hidden name=action value=add" + type + ">");
 		out.println("<select name=userid>");
 		while (userIterator.hasNext()) {
 			User user = userIterator.next();
-			if (!user.isSuperUser()) {
+			if (user.getSuperUserType().compareTo(SuperUserType.NO) == 0) {
 				out.println("<option value=" + user.getUid() + ">" + user.getFullName());
 			}
 		}
@@ -77,8 +92,5 @@ public class AdminMenueShowAdminUsersView extends HttpServlet {
 		out.println("</td>");
 		out.println("</tr>");
 		out.println("</table><p>");
-
-		out.println("<div class=mid><a href=\"" + response.encodeURL("?") + "\">zur Übersicht</a></div>");
-		template.printTemplateFooter();
 	}
 }

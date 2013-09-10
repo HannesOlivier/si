@@ -21,6 +21,7 @@ package de.tuclausthal.submissioninterface.persistence.dao;
 import java.util.List;
 
 import de.tuclausthal.submissioninterface.persistence.datamodel.User;
+import de.tuclausthal.submissioninterface.persistence.datamodel.User.SuperUserType;
 
 /**
  * Data Access Object Interface for the User-class
@@ -70,7 +71,7 @@ public interface UserDAOIf {
 	 * Get all admin-users from the DB
 	 * @return list of admin-users
 	 */
-	public List<User> getSuperUsers();
+	public List<User> getSuperUsers(SuperUserType type);
 
 	/**
 	 * Update/save the user <i>user</i>

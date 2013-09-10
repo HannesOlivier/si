@@ -7,6 +7,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import de.tuclausthal.submissioninterface.persistence.datamodel.User;
+import de.tuclausthal.submissioninterface.persistence.datamodel.User.SuperUserType;
 import de.tuclausthal.submissioninterface.template.Template;
 
 /**
@@ -41,7 +42,7 @@ public class TUCTemplate extends Template {
 		User user = requestAdapter.getUser();
 		if (user != null) {
 			out.println("Benutzer: " + user.getEmail());
-			if (user.isSuperUser()) {
+			if (user.getSuperUserType().compareTo(SuperUserType.NO) >= 1) {
 				out.println(" - <a href=\"" + servletResponse.encodeURL("AdminMenue") + "\">Admin-Menü</a>");
 			}
 			if (requestAdapter.isPrivacyMode()) {

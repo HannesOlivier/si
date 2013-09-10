@@ -18,7 +18,7 @@
   </context-param>
   <context-param>
     <param-name>adminmail</param-name>
-    <param-value>sstri@tu-clausthal.de</param-value>
+    <param-value>stricksv@hu-berlin.de</param-value>
   </context-param>
   <context-param>
     <param-name>mail-server</param-name>
@@ -26,7 +26,7 @@
   </context-param>
   <context-param>
     <param-name>mail-from</param-name>
-    <param-value>noreply@localhost</param-value>
+    <param-value>noreply@gate.informatik.hu-berlin.de</param-value>
   </context-param>
   <context-param>
     <param-name>mail-subject-prefix</param-name>
@@ -34,7 +34,7 @@
   </context-param>
   <context-param>
     <param-name>mail-users-domain</param-name>
-    <param-value>localhost</param-value>
+    <param-value>hu-berlin.de</param-value>
   </context-param>
   <context-param>
     <param-name>show-matrikelno-to-tutors</param-name>
@@ -70,7 +70,7 @@
     </init-param>
     <init-param>
       <param-name>PROVIDER_URL</param-name>
-      <param-value>ldaps://beelzebub.rz.tu-clausthal.de/ou=people,dc=tu-clausthal,dc=de;ldaps://bastet.rz.tu-clausthal.de/ou=people,dc=tu-clausthal,dc=de</param-value>
+      <param-value>ldap://repl251.informatik.hu-berlin.de/ou=People,ou=all,dc=informatik,dc=hu-berlin,dc=de</param-value>
     </init-param>
     <init-param>
       <param-name>SECURITY_AUTHENTICATION</param-name>
@@ -78,16 +78,18 @@
     </init-param>
     <init-param>
       <param-name>SECURITY_PRINCIPAL</param-name>
-      <param-value>uid={0},ou=people,dc=tu-clausthal,dc=de</param-value>
+      <param-value>uid={0},ou=People,ou=all,dc=informatik,dc=hu-berlin,dc=de</param-value>
     </init-param>
     <init-param>
       <param-name>userAttribute</param-name>
       <param-value>uid</param-value>
     </init-param>
+<!--
     <init-param>
       <param-name>matrikelNumberAttribute</param-name>
-      <param-value>tucmatrikelNr</param-value>
+      <param-value></param-value>
     </init-param>
+-->
   </filter>
   <filter-mapping>
     <filter-name>AuthenticationFilter</filter-name>

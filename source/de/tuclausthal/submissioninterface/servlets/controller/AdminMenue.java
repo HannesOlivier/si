@@ -1,5 +1,5 @@
 /*
- * Copyright 2009 - 2012 Sven Strickroth <email@cs-ware.de>
+ * Copyright 2009 - 2013 Sven Strickroth <email@cs-ware.de>
  * 
  * This file is part of the SubmissionInterface.
  * 
@@ -34,9 +34,11 @@ import de.tuclausthal.submissioninterface.persistence.dao.ParticipationDAOIf;
 import de.tuclausthal.submissioninterface.persistence.dao.UserDAOIf;
 import de.tuclausthal.submissioninterface.persistence.datamodel.JUnitTest;
 import de.tuclausthal.submissioninterface.persistence.datamodel.Lecture;
+import de.tuclausthal.submissioninterface.persistence.datamodel.Participation;
 import de.tuclausthal.submissioninterface.persistence.datamodel.ParticipationRole;
 import de.tuclausthal.submissioninterface.persistence.datamodel.Test;
 import de.tuclausthal.submissioninterface.persistence.datamodel.User;
+import de.tuclausthal.submissioninterface.persistence.datamodel.User.SuperUserType;
 import de.tuclausthal.submissioninterface.servlets.RequestAdapter;
 import de.tuclausthal.submissioninterface.util.ContextAdapter;
 import de.tuclausthal.submissioninterface.util.Util;
@@ -50,8 +52,58 @@ public class AdminMenue extends HttpServlet {
 	@Override
 	public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
 		Session session = RequestAdapter.getSession(request);
-		if (!RequestAdapter.getUser(request).isSuperUser()) {
+		if (RequestAdapter.getUser(request).getSuperUserType().compareTo(SuperUserType.NO) == 0) {
 			response.sendError(HttpServletResponse.SC_FORBIDDEN, "insufficient rights");
+			return;
+		}
+
+		if ("showLecture".equals(request.getParameter("action")) && request.getParameter("lecture") != null) {
+			Lecture lecture = DAOFactory.LectureDAOIf(session).getLecture(Util.parseInteger(request.getParameter("lecture"), 0));
+			if (!hasRightsToSee(session, RequestAdapter.getUser(request), lecture)) {
+				response.sendError(HttpServletResponse.SC_FORBIDDEN, "insufficient rights");
+				return;
+			}
+			request.setAttribute("user", RequestAdapter.getUser(request));
+			request.setAttribute("lecture", lecture);
+			request.getRequestDispatcher("AdminMenueEditLectureView").forward(request, response);
+			return;
+		} else if (("addUser".equals(request.getParameter("action")) || "removeUser".equals(request.getParameter("action"))) && request.getParameter("lecture") != null && request.getParameter("userid") != null) {
+			Lecture lecture = DAOFactory.LectureDAOIf(session).getLecture(Util.parseInteger(request.getParameter("lecture"), 0));
+			if (!hasRightsToSee(session, RequestAdapter.getUser(request), lecture)) {
+				response.sendError(HttpServletResponse.SC_FORBIDDEN, "insufficient rights");
+				return;
+			}
+			UserDAOIf userDAO = DAOFactory.UserDAOIf(session);
+			User user = userDAO.getUser(Util.parseInteger(request.getParameter("userid"), 0));
+			if (user == null) {
+				response.sendRedirect(response.encodeURL(request.getRequestURL() + "?"));
+				return;
+			} else {
+				// request.getParameter("type") != null
+				ParticipationDAOIf participationDAO = DAOFactory.ParticipationDAOIf(session);
+				Transaction tx = session.beginTransaction();
+				if (request.getParameter("action").equals("addUser")) {
+					if ("advisor".equals(request.getParameter("type"))) {
+						participationDAO.createParticipation(user, lecture, ParticipationRole.ADVISOR);
+					} else {
+						participationDAO.createParticipation(user, lecture, ParticipationRole.TUTOR);
+					}
+				} else { // dregregate user
+					participationDAO.createParticipation(user, lecture, ParticipationRole.NORMAL);
+				}
+				tx.commit();
+				response.sendRedirect(response.encodeURL(request.getRequestURL() + "?action=showLecture&lecture=" + lecture.getId()));
+				return;
+			}
+		}
+
+		if (RequestAdapter.getUser(request).getSuperUserType().compareTo(SuperUserType.SYSTEMSUPERUSER) < 0 && request.getParameter("action") != null) {
+			response.sendError(HttpServletResponse.SC_FORBIDDEN, "insufficient rights");
+			return;
+		} else if (request.getParameter("action") == null) {
+			request.setAttribute("user", RequestAdapter.getUser(request));
+			request.setAttribute("lectures", DAOFactory.LectureDAOIf(session).getLectures());
+			request.getRequestDispatcher("AdminMenueOverView").forward(request, response);
 			return;
 		}
 
@@ -107,44 +159,26 @@ public class AdminMenue extends HttpServlet {
 			}
 			// do a redirect, so that refreshing the page in a browser doesn't create duplicates
 			response.sendRedirect(response.encodeRedirectURL(request.getRequestURL() + "?"));
-		} else if ("showLecture".equals(request.getParameter("action")) && request.getParameter("lecture") != null) {
-			request.setAttribute("lecture", DAOFactory.LectureDAOIf(session).getLecture(Util.parseInteger(request.getParameter("lecture"), 0)));
-			request.getRequestDispatcher("AdminMenueEditLectureView").forward(request, response);
 		} else if ("showAdminUsers".equals(request.getParameter("action"))) {
-			request.setAttribute("superusers", DAOFactory.UserDAOIf(session).getSuperUsers());
+			request.setAttribute("superusers", DAOFactory.UserDAOIf(session).getSuperUsers(SuperUserType.SUPERUSER));
+			request.setAttribute("systemsuperusers", DAOFactory.UserDAOIf(session).getSuperUsers(SuperUserType.SYSTEMSUPERUSER));
 			request.getRequestDispatcher("AdminMenueShowAdminUsersView").forward(request, response);
-		} else if (("addSuperUser".equals(request.getParameter("action")) || "removeSuperUser".equals(request.getParameter("action"))) && request.getParameter("userid") != null) {
+		} else if (("removeSuperUser".equals(request.getParameter("action")) || "addSuperUser".equals(request.getParameter("action")) || "addSystemSuperUser".equals(request.getParameter("action"))) && request.getParameter("userid") != null) {
 			UserDAOIf userDAO = DAOFactory.UserDAOIf(session);
 			session.beginTransaction();
 			User user = userDAO.getUser(Util.parseInteger(request.getParameter("userid"), 0));
 			if (user != null) {
-				user.setSuperUser("addSuperUser".equals(request.getParameter("action")));
+				if ("addSystemSuperUser".equals(request.getParameter("action"))) {
+					user.setSuperUserType(SuperUserType.SYSTEMSUPERUSER);
+				} else if ("addSuperUser".equals(request.getParameter("action"))) {
+					user.setSuperUserType(SuperUserType.SUPERUSER);
+				} else {
+					user.setSuperUserType(SuperUserType.NO);
+				}
 				userDAO.saveUser(user);
 			}
 			session.getTransaction().commit();
 			response.sendRedirect(response.encodeURL(request.getRequestURL() + "?action=showAdminUsers"));
-		} else if (("addUser".equals(request.getParameter("action")) || "removeUser".equals(request.getParameter("action"))) && request.getParameter("lecture") != null && request.getParameter("userid") != null) {
-			Lecture lecture = DAOFactory.LectureDAOIf(session).getLecture(Util.parseInteger(request.getParameter("lecture"), 0));
-			UserDAOIf userDAO = DAOFactory.UserDAOIf(session);
-			User user = userDAO.getUser(Util.parseInteger(request.getParameter("userid"), 0));
-			if (lecture == null || user == null) {
-				response.sendRedirect(response.encodeURL(request.getRequestURL() + "?"));
-			} else {
-				// request.getParameter("type") != null
-				ParticipationDAOIf participationDAO = DAOFactory.ParticipationDAOIf(session);
-				Transaction tx = session.beginTransaction();
-				if (request.getParameter("action").equals("addUser")) {
-					if ("advisor".equals(request.getParameter("type"))) {
-						participationDAO.createParticipation(user, lecture, ParticipationRole.ADVISOR);
-					} else {
-						participationDAO.createParticipation(user, lecture, ParticipationRole.TUTOR);
-					}
-				} else { // dregregate user
-					participationDAO.createParticipation(user, lecture, ParticipationRole.NORMAL);
-				}
-				tx.commit();
-				response.sendRedirect(response.encodeURL(request.getRequestURL() + "?action=showLecture&lecture=" + lecture.getId()));
-			}
 		} else if ("su".equals(request.getParameter("action")) && request.getParameter("userid") != null) {
 			User user = DAOFactory.UserDAOIf(session).getUser(Util.parseInteger(request.getParameter("userid"), 0));
 			if (user != null) {
@@ -153,9 +187,8 @@ public class AdminMenue extends HttpServlet {
 			} else {
 				response.sendRedirect(response.encodeRedirectURL(request.getRequestURL() + "?"));
 			}
-		} else { // list all lectures
-			request.setAttribute("lectures", DAOFactory.LectureDAOIf(session).getLectures());
-			request.getRequestDispatcher("AdminMenueOverView").forward(request, response);
+		} else {
+			response.sendError(HttpServletResponse.SC_NOT_FOUND, "invalid command");
 		}
 	}
 
@@ -163,5 +196,16 @@ public class AdminMenue extends HttpServlet {
 	public void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
 		// don't want to have any special post-handling
 		doGet(request, response);
+	}
+
+	public static boolean hasRightsToSee(Session session, User user, Lecture lecture) {
+		if (lecture == null)
+			return false;
+		if (user.getSuperUserType().compareTo(SuperUserType.SYSTEMSUPERUSER) == 0)
+			return true;
+		Participation participation = DAOFactory.ParticipationDAOIf(session).getParticipation(user, lecture);
+		if (participation == null)
+			return false;
+		return participation.getRoleType().compareTo(ParticipationRole.ADVISOR) == 0;
 	}
 }

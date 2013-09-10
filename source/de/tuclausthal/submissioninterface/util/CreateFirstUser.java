@@ -1,5 +1,5 @@
 /*
- * Copyright 2009 Sven Strickroth <email@cs-ware.de>
+ * Copyright 2009,2013 Sven Strickroth <email@cs-ware.de>
  * 
  * This file is part of the SubmissionInterface.
  * 
@@ -23,6 +23,7 @@ import java.io.IOException;
 import de.tuclausthal.submissioninterface.persistence.dao.DAOFactory;
 import de.tuclausthal.submissioninterface.persistence.dao.UserDAOIf;
 import de.tuclausthal.submissioninterface.persistence.datamodel.User;
+import de.tuclausthal.submissioninterface.persistence.datamodel.User.SuperUserType;
 
 /**
  * Tool for creating a first super user
@@ -36,7 +37,7 @@ public class CreateFirstUser {
 	public static void main(String[] args) throws IOException {
 		UserDAOIf userDAOIf = DAOFactory.UserDAOIf(HibernateSessionHelper.getSessionFactory().openSession());
 		User user = userDAOIf.createUser(args[0], args[1], args[2]);
-		user.setSuperUser(true);
+		user.setSuperUserType(SuperUserType.SYSTEMSUPERUSER);
 		userDAOIf.saveUser(user);
 		System.out.println("User created.");
 	}

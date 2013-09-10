@@ -28,7 +28,13 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.hibernate.Session;
+
 import de.tuclausthal.submissioninterface.persistence.datamodel.Lecture;
+import de.tuclausthal.submissioninterface.persistence.datamodel.User;
+import de.tuclausthal.submissioninterface.persistence.datamodel.User.SuperUserType;
+import de.tuclausthal.submissioninterface.servlets.RequestAdapter;
+import de.tuclausthal.submissioninterface.servlets.controller.AdminMenue;
 import de.tuclausthal.submissioninterface.template.Template;
 import de.tuclausthal.submissioninterface.template.TemplateFactory;
 import de.tuclausthal.submissioninterface.util.Util;
@@ -42,6 +48,11 @@ public class AdminMenueOverView extends HttpServlet {
 	public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
 		Template template = TemplateFactory.getTemplate(request, response);
 
+		User user = (User) request.getAttribute("user");
+		Session session = RequestAdapter.getSession(request);
+
+		boolean isSystemSuperUser = (user.getSuperUserType().compareTo(SuperUserType.SYSTEMSUPERUSER) == 0);
+
 		template.printTemplateHeader("Admin-Menü", "<a href=\"" + response.encodeURL("Overview") + "\">Meine Veranstaltungen</a> - Admin-Menü");
 		PrintWriter out = response.getWriter();
 
@@ -54,16 +65,21 @@ public class AdminMenueOverView extends HttpServlet {
 			out.println("</tr>");
 			while (lectureIterator.hasNext()) {
 				Lecture lecture = lectureIterator.next();
-				out.println("<tr>");
-				out.println("<td><a href=\"" + response.encodeURL("?action=showLecture&amp;lecture=" + lecture.getId()) + "\">" + Util.escapeHTML(lecture.getName()) + "</a></td>");
-				out.println("<td>" + lecture.getReadableSemester() + "</td>");
-				out.println("</tr>");
+				if (isSystemSuperUser || AdminMenue.hasRightsToSee(session, user, lecture)) {
+					out.println("<tr>");
+					out.println("<td><a href=\"" + response.encodeURL("?action=showLecture&amp;lecture=" + lecture.getId()) + "\">" + Util.escapeHTML(lecture.getName()) + "</a></td>");
+					out.println("<td>" + lecture.getReadableSemester() + "</td>");
+					out.println("</tr>");
+				}
 			}
 			out.println("</table>");
 		}
-		out.println("<p class=mid><a href=\"" + response.encodeURL("?action=newLecture") + "\">Neue Veranstaltung</a></p>");
-		out.println("<p class=mid><a href=\"" + response.encodeURL("?action=showAdminUsers") + "\">Super User anzeigen</a></p>");
-		out.println("<p class=mid><a onclick=\"return confirmLink('Wirklich CleanUp durchführen?')\" href=\"" + response.encodeURL("?action=cleanup") + "\">Verzeichnis Cleanup</a></p>");
+
+		if (isSystemSuperUser) {
+			out.println("<p class=mid><a href=\"" + response.encodeURL("?action=newLecture") + "\">Neue Veranstaltung</a></p>");
+			out.println("<p class=mid><a href=\"" + response.encodeURL("?action=showAdminUsers") + "\">Super User anzeigen</a></p>");
+			out.println("<p class=mid><a onclick=\"return confirmLink('Wirklich CleanUp durchführen?')\" href=\"" + response.encodeURL("?action=cleanup") + "\">Verzeichnis Cleanup</a></p>");
+		}
 
 		template.printTemplateFooter();
 	}

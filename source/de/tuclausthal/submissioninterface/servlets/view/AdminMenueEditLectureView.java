@@ -31,6 +31,7 @@ import de.tuclausthal.submissioninterface.persistence.datamodel.Lecture;
 import de.tuclausthal.submissioninterface.persistence.datamodel.Participation;
 import de.tuclausthal.submissioninterface.persistence.datamodel.ParticipationRole;
 import de.tuclausthal.submissioninterface.persistence.datamodel.User;
+import de.tuclausthal.submissioninterface.persistence.datamodel.User.SuperUserType;
 import de.tuclausthal.submissioninterface.template.Template;
 import de.tuclausthal.submissioninterface.template.TemplateFactory;
 import de.tuclausthal.submissioninterface.util.Util;
@@ -44,64 +45,61 @@ public class AdminMenueEditLectureView extends HttpServlet {
 	public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
 		Template template = TemplateFactory.getTemplate(request, response);
 
+		User user = (User) request.getAttribute("user");
 		Lecture lecture = (Lecture) request.getAttribute("lecture");
-		if (lecture == null) {
-			template.printTemplateHeader("Veranstaltung nicht gefunden");
-			PrintWriter out = response.getWriter();
-			out.println("<div class=mid><a href=\"" + response.encodeURL("?") + "\">zur Übersicht</a></div>");
-		} else {
-			template.printTemplateHeader("Veranstaltung \"" + Util.escapeHTML(lecture.getName()) + "\" bearbeiten", "<a href=\"" + response.encodeURL("Overview") + "\">Meine Veranstaltungen</a> - <a href=\"AdminMenue\">Admin-Menü</a> &gt; Veranstaltung \"" + Util.escapeHTML(lecture.getName()) + "\" bearbeiten");
-			PrintWriter out = response.getWriter();
+		template.printTemplateHeader("Veranstaltung \"" + Util.escapeHTML(lecture.getName()) + "\" bearbeiten", "<a href=\"" + response.encodeURL("Overview") + "\">Meine Veranstaltungen</a> - <a href=\"AdminMenue\">Admin-Menü</a> &gt; Veranstaltung \"" + Util.escapeHTML(lecture.getName()) + "\" bearbeiten");
+		PrintWriter out = response.getWriter();
+		if (user.getSuperUserType().compareTo(SuperUserType.SYSTEMSUPERUSER) == 0) {
 			out.println("<p class=mid><a onclick=\"return confirmLink('Wirklich löschen?')\" href=\"" + response.encodeURL("?action=deleteLecture&amp;lecture=" + lecture.getId()) + "\">Veranstaltung löschen</a></p>");
-			out.println("<h2>Betreuer</h2>");
-			Iterator<Participation> advisorIterator = lecture.getParticipants().iterator();
-			out.println("<table class=border>");
-			out.println("<tr>");
-			out.println("<th>Benutzer</th>");
-			out.println("<th>Entfernen</th>");
-			out.println("</tr>");
-			while (advisorIterator.hasNext()) {
-				Participation participation = advisorIterator.next();
-				if (participation.getRoleType() == ParticipationRole.ADVISOR) {
-					User user = participation.getUser();
-					out.println("<tr>");
-					out.println("<td>" + user.getFullName() + "</td>");
-					out.println("<td><a onclick=\"return confirmLink('Wirklich degradieren?')\" href=\"" + response.encodeURL("?action=removeUser&amp;lecture=" + lecture.getId() + "&amp;userid=" + user.getUid()) + "\">degradieren</a></td>");
-					out.println("</tr>");
-				}
-			}
-			out.println("<tr>");
-			out.println("<td colspan=2>");
-			printAddUserForm(out, lecture, "advisor");
-			out.println("</td>");
-			out.println("</tr>");
-			out.println("</table><p>");
-
-			out.println("<h2>Tutoren</h2>");
-			Iterator<Participation> tutorIterator = lecture.getParticipants().iterator();
-			out.println("<table class=border>");
-			out.println("<tr>");
-			out.println("<th>Benutzer</th>");
-			out.println("<th>Entfernen</th>");
-			out.println("</tr>");
-			while (tutorIterator.hasNext()) {
-				Participation participation = tutorIterator.next();
-				if (participation.getRoleType() == ParticipationRole.TUTOR) {
-					User user = participation.getUser();
-					out.println("<tr>");
-					out.println("<td>" + user.getFullName() + "</td>");
-					out.println("<td><a onclick=\"return confirmLink('Wirklich löschen?')\" href=\"" + response.encodeURL("?action=removeUser&amp;lecture=" + lecture.getId() + "&amp;userid=" + user.getUid()) + "\">degradieren</a></td>");
-					out.println("</tr>");
-				}
-			}
-			out.println("<tr>");
-			out.println("<td colspan=2>");
-			printAddUserForm(out, lecture, "tutor");
-			out.println("</td>");
-			out.println("</tr>");
-			out.println("</table><p>");
-			out.println("<div class=mid><a href=\"" + response.encodeURL("?") + "\">zur Übersicht</a></div>");
 		}
+		out.println("<h2>Betreuer</h2>");
+		Iterator<Participation> advisorIterator = lecture.getParticipants().iterator();
+		out.println("<table class=border>");
+		out.println("<tr>");
+		out.println("<th>Benutzer</th>");
+		out.println("<th>Entfernen</th>");
+		out.println("</tr>");
+		while (advisorIterator.hasNext()) {
+			Participation participation = advisorIterator.next();
+			if (participation.getRoleType() == ParticipationRole.ADVISOR) {
+				User theUser = participation.getUser();
+				out.println("<tr>");
+				out.println("<td>" + theUser.getFullName() + "</td>");
+				out.println("<td><a onclick=\"return confirmLink('Wirklich degradieren?')\" href=\"" + response.encodeURL("?action=removeUser&amp;lecture=" + lecture.getId() + "&amp;userid=" + theUser.getUid()) + "\">degradieren</a></td>");
+				out.println("</tr>");
+			}
+		}
+		out.println("<tr>");
+		out.println("<td colspan=2>");
+		printAddUserForm(out, lecture, "advisor");
+		out.println("</td>");
+		out.println("</tr>");
+		out.println("</table><p>");
+
+		out.println("<h2>Tutoren</h2>");
+		Iterator<Participation> tutorIterator = lecture.getParticipants().iterator();
+		out.println("<table class=border>");
+		out.println("<tr>");
+		out.println("<th>Benutzer</th>");
+		out.println("<th>Entfernen</th>");
+		out.println("</tr>");
+		while (tutorIterator.hasNext()) {
+			Participation participation = tutorIterator.next();
+			if (participation.getRoleType() == ParticipationRole.TUTOR) {
+				User theUser = participation.getUser();
+				out.println("<tr>");
+				out.println("<td>" + theUser.getFullName() + "</td>");
+				out.println("<td><a onclick=\"return confirmLink('Wirklich löschen?')\" href=\"" + response.encodeURL("?action=removeUser&amp;lecture=" + lecture.getId() + "&amp;userid=" + theUser.getUid()) + "\">degradieren</a></td>");
+				out.println("</tr>");
+			}
+		}
+		out.println("<tr>");
+		out.println("<td colspan=2>");
+		printAddUserForm(out, lecture, "tutor");
+		out.println("</td>");
+		out.println("</tr>");
+		out.println("</table><p>");
+		out.println("<div class=mid><a href=\"" + response.encodeURL("?") + "\">zur Übersicht</a></div>");
 		template.printTemplateFooter();
 	}
 

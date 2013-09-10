@@ -58,9 +58,9 @@ public class EditParticipation extends HttpServlet {
 		}
 
 		Transaction tx = session.beginTransaction();
-		if (request.getParameter("type") != null && request.getParameter("type").equals("advisor") && callerParticipation.getUser().isSuperUser()) {
+		/*if (request.getParameter("type") != null && request.getParameter("type").equals("advisor") && callerParticipation.getUser().isSuperUser()) {
 			participationDAO.createParticipation(participation.getUser(), participation.getLecture(), ParticipationRole.ADVISOR);
-		} else if (request.getParameter("type") != null && request.getParameter("type").equals("tutor")) {
+		} else */if (request.getParameter("type") != null && request.getParameter("type").equals("tutor")) {
 			participationDAO.createParticipation(participation.getUser(), participation.getLecture(), ParticipationRole.TUTOR);
 		} else {
 			participationDAO.createParticipation(participation.getUser(), participation.getLecture(), ParticipationRole.NORMAL);

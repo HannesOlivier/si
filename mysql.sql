@@ -387,7 +387,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `email` varchar(255) NOT NULL,
   `firstName` varchar(255) CHARACTER SET latin1 COLLATE latin1_german2_ci NOT NULL,
   `lastName` varchar(255) CHARACTER SET latin1 COLLATE latin1_german2_ci NOT NULL,
-  `superUser` bit(1) NOT NULL,
+  `superUser` tinyint(1) NOT NULL,
   `matrikelno` int(11) DEFAULT NULL,
   `studiengang` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`uid`),
